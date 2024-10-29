@@ -290,8 +290,23 @@ def init_repository():
     if repo:
         send_telegram_message("✅ Репозиторий успешно создан/проверен")
         logging.info("Репозиторий успешно инициализирован")
+        
+        # Планируем первый бэкап через минуту
+        schedule.every(1).minutes.do(first_backup).tag('first_backup')
+        while True:
+            schedule.run_pending()
+            time.sleep(1)
+            # Проверяем, выполнен ли первый бэкап
+            if not schedule.get_jobs('first_backup'):
+                break
         return True
     return False
+
+def first_backup():
+    """Выполнение первого бэкапа"""
+    backup_job()
+    # Удаляем задачу первого бэкапа после выполнения
+    schedule.clear('first_backup')
 
 def main():
     """Основная функция"""
@@ -307,6 +322,10 @@ def main():
         return
         
     if args.init_repo:
+        if not all([GITHUB_TOKEN, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, REPO_NAME]):
+            print("❌ Заполните все необходимые переменные в .env файле:")
+            print("GITHUB_TOKEN, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, GITHUB_REPO_NAME")
+            return
         init_repository()
         return
         
